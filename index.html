@@ -11,6 +11,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    
     <style>
         /* ============================================
            CSS VARIABLES & RESET
@@ -350,6 +353,12 @@
         .btn-secondary:hover {
             background: rgba(201, 162, 39, 0.1);
             transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
         }
 
         .hero-image {
@@ -887,6 +896,25 @@
             display: block;
         }
 
+        .form-loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--primary-bg);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* ============================================
            FOOTER
            ============================================ */
@@ -1065,7 +1093,7 @@
             </div>
             <div class="hero-image">
                 <div class="hero-image-wrapper">
-                    <img src="assets/profile.jpg" alt="Mungai Joseph - ICT Systems Architect" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22%3E%3Crect width=%22400%22 height=%22400%22 fill=%22%23112240%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-family=%22Poppins%22 font-size=%2224%22 fill=%22%23C9A227%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22%3EMJ%3C/text%3E%3C/svg%3E'">
+                    <img src="assets/watermark-cd10f5428be1b1b684680e66a4faf68b_4.jpeg" alt="Mungai Joseph - ICT Systems Architect" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22%3E%3Crect width=%22400%22 height=%22400%22 fill=%22%23112240%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-family=%22Poppins%22 font-size=%2224%22 fill=%22%23C9A227%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22%3EMJ%3C/text%3E%3C/svg%3E'">
                 </div>
             </div>
         </div>
@@ -1323,7 +1351,7 @@
                     <div class="form-success" id="formSuccess">
                         Thank you for your message. I'll get back to you shortly.
                     </div>
-                    <form id="contactForm" action="https://formspree.io/f/xnqevjdr" method="POST">
+                    <form id="contactForm">
                         <div class="form-group">
                             <label for="name" class="form-label">Name</label>
                             <input type="text" id="name" name="name" class="form-input" placeholder="Your name" required>
@@ -1344,7 +1372,9 @@
                             <textarea id="message" name="message" class="form-textarea" placeholder="Tell me about your project or event..." required></textarea>
                             <span class="form-error" id="messageError">Please enter your message</span>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">Send Message</button>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;" id="submitBtn">
+                            <span id="btnText">Send Message</span>
+                        </button>
                     </form>
                 </div>
             </div>
@@ -1361,6 +1391,14 @@
 
     <!-- JavaScript -->
     <script>
+        // ============================================
+        // EMAILJS CONFIGURATION
+        // ============================================
+        
+        // Initialize EmailJS with your Public Key
+        // Replace 'YOUR_PUBLIC_KEY' with your actual EmailJS public key
+        emailjs.init('YOUR_PUBLIC_KEY');
+
         // ============================================
         // NAVIGATION FUNCTIONALITY
         // ============================================
@@ -1425,11 +1463,13 @@
         });
 
         // ============================================
-        // FORM VALIDATION & HANDLING
+        // FORM VALIDATION & EMAILJS HANDLING
         // ============================================
         
         const contactForm = document.getElementById('contactForm');
         const formSuccess = document.getElementById('formSuccess');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
 
         contactForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1469,27 +1509,46 @@
             }
             
             if (isValid) {
+                // Show loading state
+                submitBtn.disabled = true;
+                btnText.innerHTML = '<span class="form-loading"><span class="spinner"></span>Sending...</span>';
+                
+                // Prepare template parameters
+                const templateParams = {
+                    from_name: name.value.trim(),
+                    from_email: email.value.trim(),
+                    subject: subject.value.trim(),
+                    message: message.value.trim(),
+                    to_email: 'joemunga329@gmail.com'
+                };
+                
                 try {
-                    const formData = new FormData(contactForm);
-                    const response = await fetch(contactForm.action, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'Accept': 'application/json'
-                        }
-                    });
+                    // Send email using EmailJS
+                    // Replace 'YOUR_SERVICE_ID' and 'YOUR_TEMPLATE_ID' with your actual EmailJS credentials
+                    const response = await emailjs.send(
+                        'YOUR_SERVICE_ID',    // EmailJS Service ID
+                        'YOUR_TEMPLATE_ID',   // EmailJS Template ID
+                        templateParams
+                    );
                     
-                    if (response.ok) {
+                    if (response.status === 200) {
                         formSuccess.classList.add('visible');
                         contactForm.reset();
+                        
+                        // Hide success message after 5 seconds
                         setTimeout(() => {
                             formSuccess.classList.remove('visible');
                         }, 5000);
                     } else {
-                        alert('There was an error sending your message. Please try again or contact me directly via email.');
+                        throw new Error('Failed to send message');
                     }
                 } catch (error) {
-                    alert('There was an error sending your message. Please try again or contact me directly via email.');
+                    console.error('EmailJS Error:', error);
+                    alert('There was an error sending your message. Please try again or contact me directly via email at joemunga329@gmail.com');
+                } finally {
+                    // Reset button state
+                    submitBtn.disabled = false;
+                    btnText.textContent = 'Send Message';
                 }
             }
         });
@@ -1547,7 +1606,7 @@
         
         // Preload profile image
         const img = new Image();
-        img.src = 'assets/profile.jpg';
+        img.src = 'assets/watermark-cd10f5428be1b1b684680e66a4faf68b_4.jpeg';
     </script>
 </body>
 </html>
